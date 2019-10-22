@@ -18,8 +18,10 @@ const User = require("../models/user");
 const Transmission = require("../models/transmission");
 
 const authRoute = require("../routes/auth");
+const transmissionRoute = require("../routes/transmission");
 
 app.use("/auth", authRoute);
+app.use("/transmissions", transmissionRoute);
 
 mongoose.connect("mongodb://localhost:27018/onlytransmission", {
   useCreateIndex: true,

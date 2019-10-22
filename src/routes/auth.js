@@ -9,7 +9,14 @@ const jsonwebtoken = require("jsonwebtoken");
 
 router.post("/authenticate", async (req, res) => {
   const { login, password } = req.body;
+
   const defaultMessage = "Invalid credentials";
+
+  if (!login || !password) {
+    return res.status(403).send({
+      error: defaultMessage
+    });
+  }
 
   const user = await User.findOne({ login }).select("+password");
 
@@ -22,9 +29,10 @@ router.post("/authenticate", async (req, res) => {
   }
 
   const oneDay = 86400;
+  // secret_key here '_'
   const token = jsonwebtoken.sign({ id: user.id }, "_", { expiresIn: oneDay });
 
-  res.send({ user, token });
+  res.status(200).send({ user, token });
 });
 
 router.post("/register", async (req, res) => {
@@ -46,7 +54,7 @@ router.post("/register", async (req, res) => {
         password: await bcrypt.hash(password, BCRYPT_SALT_ROUNDS)
       });
 
-      delete user.password;
+      user.password = undefined;
       res.status(201).send({ success: user });
     } else {
       res.status(401).send({
