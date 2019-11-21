@@ -2,29 +2,57 @@ const axios = require("axios");
 const mongoose = require("mongoose");
 const Transmissions = mongoose.model("Transmission");
 const { emit } = require("../socket");
+const nodecron = require("node-cron");
 
-// TODO: Implementar outra forma de fazer o job. Exemplo: Utilizando node-cron ou node-schedule
-setInterval(async () => {
-  process.env.YT_API_KEY = "";
-
+// Task - Verify every five minutes
+nodecron.schedule("*/1 * * * *", async () => {
   const transmissions = await Transmissions.find({ status: "OFF" });
 
   if (transmissions) {
-    transmissions.forEach(t => {
-      axios.default
-        .get(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${t.channelId}&type=video&eventType=live&key=${process.env.YT_API_KEY}`
-        )
-        .then(responseOkHandler)
-        .catch(err => console.error("err"));
+    transmissions.forEach(async t => {
+      const response = await searchEventLiveByChannelId(t.channelId);
+      await verifyIfOnHandler(response);
     });
   }
-}, 6000);
+});
 
-const responseOkHandler = async response => {
-  const liveOff = 0;
+// Task - Verify every ten minutes
+nodecron.schedule("*/30 * * * *", async () => {
+  const transmissions = await Transmissions.find({ status: "ON" });
 
-  if (response.data.pageInfo.totalResults !== liveOff) {
+  if (transmissions) {
+    transmissions.forEach(async t => {
+      const response = await searchEventLiveByChannelId(t.channelId);
+      await verifyIfOffHandler(response, t.channelId);
+    });
+  }
+});
+
+const isOn = response => {
+  const off = 0;
+  return response.data.pageInfo.totalResults !== off;
+};
+
+const searchEventLiveByChannelId = async channelId => {
+  return await axios.default.get(
+    `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&type=video&eventType=live&key=${process.env.YT_API_KEY}`
+  );
+};
+
+const verifyIfOffHandler = async (response, channelId) => {
+  if (!isOn(response)) {
+    const transmission = await Transmissions.findOneAndUpdate(
+      { channelId },
+      { status: "OFF", videoId: null }
+    );
+
+    emit("live:off", transmission);
+  }
+};
+
+const verifyIfOnHandler = async response => {
+  if (isOn(response)) {
+    console.log("isOn");
     const channelId = response.data.items[0].snippet.channelId;
     const videoId = response.data.items[0].id.videoId;
 
@@ -34,7 +62,7 @@ const responseOkHandler = async response => {
     );
 
     emit("live:on", transmission);
+  } else {
+    console.log("isOff");
   }
 };
-
-// TODO: Implementar remoção do conteúdo que se passou a ficar offline

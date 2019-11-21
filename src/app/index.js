@@ -23,7 +23,7 @@ const transmissionRoute = require("../routes/transmission");
 app.use("/auth", authRoute);
 app.use("/transmissions", transmissionRoute);
 
-mongoose.connect("mongodb://localhost:27018/onlytransmission", {
+mongoose.connect(process.env.MONGO_URL, {
   useCreateIndex: true,
   useNewUrlParser: true,
   useUnifiedTopology: true

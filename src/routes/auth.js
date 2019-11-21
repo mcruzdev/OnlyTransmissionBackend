@@ -29,8 +29,7 @@ router.post("/authenticate", async (req, res) => {
   }
 
   const oneDay = 86400;
-  // secret_key here '_'
-  const token = jsonwebtoken.sign({ id: user.id }, "_", { expiresIn: oneDay });
+  const token = jsonwebtoken.sign({ id: user.id }, process.env.API_SECRET, { expiresIn: oneDay });
 
   res.status(200).send({ user, token });
 });

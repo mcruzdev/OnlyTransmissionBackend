@@ -1,5 +1,5 @@
 const socketio = require("socket.io");
-let io = {};
+let io = null;
 
 const configure = server => {
   io = socketio(server);
@@ -10,6 +10,10 @@ const configure = server => {
 module.exports = {
   configureSocket: server => configure(server),
   emit: (message, data) => {
-    io.emit(message, data);
+    if (io) {
+      io.emit(message, data);
+    } else {
+      throw new Error("Socket not configured");
+    }
   }
 };
